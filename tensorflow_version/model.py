@@ -41,6 +41,9 @@ class GraphSAINT:
         self.adj_subgraph_6=placeholders['adj_subgraph_6']
         self.adj_subgraph_7=placeholders['adj_subgraph_7']
         self.dim0_adj_sub = placeholders['dim0_adj_sub'] #adj_full_norm.shape[0]/8
+        
+        print("########## Model init graph: ",tf.compat.v1.get_default_graph())
+        
         self.features = tf.Variable(tf.constant(features, dtype=DTYPE), trainable=False)
         self.dualGPU=args_global.dualGPU
         _indices = np.column_stack(adj_full_norm.nonzero())
@@ -60,6 +63,7 @@ class GraphSAINT:
 
         self.loss = 0
         self.opt_op = None
+        self.train_op = None
         self.norm_loss = placeholders['norm_loss']
         self.is_train = placeholders['is_train']
         
@@ -109,6 +113,12 @@ class GraphSAINT:
                     for grad, var in grads_and_vars]
             self.grad, _ = clipped_grads_and_vars[0]
             self.opt_op = self.optimizer.apply_gradients(clipped_grads_and_vars)
+            
+            global_step = tf.train.get_global_step()
+            if global_step:
+                update_global_step = tf.compat.v1.assign(global_step, global_step + 1, name = 'update_global_step')
+                self.train_op = tf.group(self.opt_op, update_global_step)
+            
         self.preds = self.predict()
 
 

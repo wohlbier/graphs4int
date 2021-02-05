@@ -235,6 +235,12 @@ class Minibatch:
         tt3=time.time()
         # if mode in ['train']:
         #     print("t1:{:.3f} t2:{:.3f} t3:{:.3f}".format(tt0-tt1,tt2-tt1,tt3-tt2))
+        
+#         if mode in ['val','test']:
+#             feed_dict[self.placeholders['is_train']]=False
+#         else:
+#             feed_dict[self.placeholders['is_train']]=True
+            
         if mode in ['val','test']:
             feed_dict[self.placeholders['is_train']]=False
         else:
