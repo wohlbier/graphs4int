@@ -37,6 +37,8 @@ parser.add_argument("--cpu_eval",default=False,action="store_true",help="whether
 parser.add_argument("--saved_model_path",default="",type=str,help="path to pretrained model file")
 
 parser.add_argument("--loss_dim_expand",default=False,action="store_true",help="whether to expand loss dim to accomodate ogbn data")
+parser.add_argument("--num_global_train_steps",default=1,type=int,help="How many times to perform the training operation i.e. num calls to sess.run()")
+parser.add_argument("--train_log_freq",default=20,type=int,help="How often perform the log ops spec'd in the estimator RunConfig, like train loss")
 args_global = parser.parse_args()
 
 
@@ -44,7 +46,8 @@ NUM_PAR_SAMPLER = args_global.num_cpu_core
 SAMPLES_PER_PROC = -(-200 // NUM_PAR_SAMPLER) # round up division
 
 EVAL_VAL_EVERY_EP = args_global.eval_val_every #25 #1       # get accuracy on the validation set every this # epochs
-
+NUM_GLOBAL_TRAIN_STEPS = args_global.num_global_train_steps
+TRAIN_LOG_FREQ = args_global.train_log_freq
 
 # auto choosing available NVIDIA GPU
 gpu_selected = args_global.gpu

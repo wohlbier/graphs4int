@@ -41,9 +41,7 @@ class GraphSAINT:
         self.adj_subgraph_6=placeholders['adj_subgraph_6']
         self.adj_subgraph_7=placeholders['adj_subgraph_7']
         self.dim0_adj_sub = placeholders['dim0_adj_sub'] #adj_full_norm.shape[0]/8
-        
-        print("########## Model init graph: ",tf.compat.v1.get_default_graph())
-        
+                
         self.features = tf.Variable(tf.constant(features, dtype=DTYPE), trainable=False)
         self.dualGPU=args_global.dualGPU
         _indices = np.column_stack(adj_full_norm.nonzero())
