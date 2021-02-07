@@ -25,6 +25,11 @@
 
 # current checkpoint clearing command from GraphSAINT `rm -rf models/* && rm -rf test-saving-* && rm -rf tmp.chkpt*`
 
+import numpy as np
+import os
+import sys
+import tensorflow as tf
+
 from graphsaint.globals import *
 from graphsaint.tf.inits import *
 from graphsaint.tf.model import GraphSAINT
@@ -33,18 +38,6 @@ from graphsaint.utils import *
 from graphsaint.metric import *
 from tensorflow.python.client import timeline
 
-import sys, os, random
-import tensorflow as tf
-import numpy as np
-import time
-import pdb
-import json
-
-#import os
-#import sys
-#import argparse
-#import tensorflow as tf
-#
 ## Relative path imports
 #sys.path.append(os.path.join(os.path.dirname(__file__), '../..'))
 #from common_zoo.estimator.tf.cs_estimator import CerebrasEstimator
@@ -57,7 +50,6 @@ import json
 #from graphs.tf.model import model_fn
 #from graphs.tf.data import input_fn
 #from graphs.tf.utils import DEFAULT_PARAMS_FILE, get_params
-
 
 # really major todo around val/test evaluation - less efficient than reference right now
 def evaluate_full_batch(sess,model,minibatch_iter,many_runs_timeline,mode):
@@ -350,7 +342,6 @@ def train(train_phases,model_args):
             input_fn=tr_input_fn, steps=train_steps,
             hooks=[iterator_hook, session_saver_hook]
         )
-        sys.exit(1)
         #############################################
         # remainder of original loop and metric features removed
 
