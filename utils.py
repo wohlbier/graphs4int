@@ -109,7 +109,7 @@ def parse_layer_yml(arch_gcn,dim_input):
 
 def parse_n_prepare(flags):
     with open(flags.train_config) as f_train_config:
-        train_config = yaml.load(f_train_config)
+        train_config = yaml.full_load(f_train_config)
     arch_gcn = {
         'dim': -1,
         'aggr': 'concat',
@@ -136,11 +136,8 @@ def parse_n_prepare(flags):
     temp_data = load_data(flags.data_prefix)
     train_data = process_graph_data(*temp_data)
     print("Done loading training data..")
-    return train_params,train_phases,train_data,arch_gcn
 
-
-
-
+    return train_params, train_phases, train_data, arch_gcn
 
 def log_dir(f_train_config,prefix,git_branch,git_rev,timestamp):
     import getpass

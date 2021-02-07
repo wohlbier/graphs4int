@@ -25,7 +25,6 @@
 
 # current checkpoint clearing command from GraphSAINT `rm -rf models/* && rm -rf test-saving-* && rm -rf tmp.chkpt*`
 
-
 from graphsaint.globals import *
 from graphsaint.tf.inits import *
 from graphsaint.tf.model import GraphSAINT
@@ -40,6 +39,24 @@ import numpy as np
 import time
 import pdb
 import json
+
+#import os
+#import sys
+#import argparse
+#import tensorflow as tf
+#
+## Relative path imports
+#sys.path.append(os.path.join(os.path.dirname(__file__), '../..'))
+#from common_zoo.estimator.tf.cs_estimator import CerebrasEstimator
+#from common_zoo.estimator.tf.run_config import CSRunConfig
+#from common_zoo.run_utils.utils import (
+#    save_dict,
+#    prep_env,
+#)
+#
+#from graphs.tf.model import model_fn
+#from graphs.tf.data import input_fn
+#from graphs.tf.utils import DEFAULT_PARAMS_FILE, get_params
 
 
 # really major todo around val/test evaluation - less efficient than reference right now
@@ -161,7 +178,7 @@ class IteratorInitializerHook(tf.estimator.SessionRunHook):
 
 def train_input_fn(*args, **kwargs):
 
-    phase =kwargs["phase"]
+    phase=kwargs["phase"]
 
     iterator_initiliser_hook = IteratorInitializerHook()
 
@@ -341,11 +358,101 @@ def train(train_phases,model_args):
 # MAIN #
 ########
 
-def train_main(argv=None):
-    train_params,train_phases,train_data,arch_gcn = parse_n_prepare(
+def main(argv=None):
+    #args = parse_args()
+    #params = get_params(args.params, args)
+
+    train_params, train_phases, train_data, arch_gcn = parse_n_prepare(
         args_global
     )
-    train(train_phases,[train_data,train_params,arch_gcn])
+    print("train_params: " + str(train_params))
+    print("train_phases: " + str(train_phases))
+    print("arch_gcn: " + str(arch_gcn))
+    model_args = [train_data,train_params,arch_gcn]
+
+    params = vars(args_global)
+    print("params: " + str(params))
+    #cb#save_dict(params, model_dir=params['model_dir'])
+
+    use_cs = (
+        params['mode'] in ('train', 'compile_only')
+        and params['cs_ip'] is not None
+    )
+    cs_ip = params['cs_ip'] + ':9000' if use_cs else None
+    #cb#prep_env(params)
+
+    # Cerebras stack params
+    stack_params = dict()
+    #if use_cs:
+    #    from cerebras.pb.stack.full_pb2 import FullConfig
+    #    from cerebras.pb.common.tri_state_pb2 import TS_DISABLED
+    #
+    #    # Custom Cerebras config for improved performance
+    #    config = FullConfig()
+    #    config.placement.match_port_format.prefer_dense_packets = TS_DISABLED
+    #    stack_params['config'] = config
+
+    #if not (use_cs or params['optimizer']['grad_accum_steps'] < 2):
+    #    params['runconfig']['save_summary_steps'] = 1
+
+    #config = CSRunConfig(
+    #    cs_ip=cs_ip, stack_params=stack_params, **params['runconfig'],
+    #)
+    config = tf.estimator.RunConfig(
+        model_dir=params["model_dir"],
+        save_summary_steps=TRAIN_LOG_FREQ,
+        save_checkpoints_steps=TRAIN_LOG_FREQ,
+        log_step_count_steps=TRAIN_LOG_FREQ
+    )
+
+    #est = CerebrasEstimator(
+    #    model_fn,
+    #    model_dir=params['model_dir'],
+    #    params=params,
+    #    use_cs=use_cs,
+    #    config=config,
+    #)
+    p = None
+    for ip, phase in enumerate(train_phases):
+        p = phase
+        print("ip: " + str(ip) + " p: " + str(p))
+
+    input_fn, placeholders, iterator_hook = train_input_fn(
+        *model_args, phase=p
+    )
+    model_fn = custom_model_fn(
+        *model_args, placeholders=placeholders
+    )
+    est = tf.compat.v1.estimator.Estimator(
+        model_fn=model_fn, config=config
+    )
+    session_saver_hook = SessionSaverHook()
+
+    if params['mode'] == 'train':
+        est.train(
+            input_fn=input_fn,
+            steps=NUM_GLOBAL_TRAIN_STEPS,
+            hooks=[iterator_hook, session_saver_hook]
+        )
+    #elif params['mode'] == 'eval':
+    #    est.evaluate(
+    #        input_fn=lambda: input_fn(params, tf.estimator.ModeKeys.EVAL),
+    #    )
+    #elif params['mode'] == 'eval_all':
+    #    ckpt_list = tf.train.get_checkpoint_state(
+    #        params['model_dir']
+    #    ).all_model_checkpoint_paths
+    #    for ckpt in ckpt_list:
+    #        est.evaluate(
+    #            input_fn=lambda: input_fn(params, tf.estimator.ModeKeys.EVAL),
+    #            checkpoint_path=ckpt
+    #        )
+    #else:
+    #    est.compile(
+    #        input_fn,
+    #        validate_only=(params['mode'] == 'validate_only'),
+    #    )
 
 if __name__ == '__main__':
-    tf.compat.v1.app.run(main=train_main)
+    tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.INFO)
+    main()

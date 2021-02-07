@@ -28,7 +28,6 @@ timestamp = datetime.datetime.fromtimestamp(
 #np.random.seed(seed)
 #tf.set_random_seed(seed)
 
-
 parser = argparse.ArgumentParser(
     description="argument for GraphSAINT training"
 )
@@ -110,13 +109,12 @@ parser.add_argument(
     action="store_true",
     help="whether to use CPU to do evaluation"
 )
-parser.add_argument(
-    "--saved_model_path",
-    default="",
-    type=str,
-    help="path to pretrained model file"
-)
-
+#parser.add_argument(
+#    "--saved_model_path",
+#    default="",
+#    type=str,
+#    help="path to pretrained model file"
+#)
 parser.add_argument(
     "--loss_dim_expand",
     default=False,
@@ -135,8 +133,49 @@ parser.add_argument(
     type=int,
     help="How often perform the log ops spec'd in the estimator RunConfig, like train loss"
 )
-args_global = parser.parse_args()
 
+# Cerebras args
+parser.add_argument('--cs_ip', help='CS-1 IP address, defaults to None')
+parser.add_argument(
+    '-m',
+    '--mode',
+    choices=['validate_only', 'compile_only', 'train', 'eval', 'eval_all'],
+    default='train',
+    help=(
+        'Can choose from validate_only, compile_only, train, eval or eval_all.'
+        + '  Validate only will only go up to kernel matching.'
+        + '  Compile only continues through and generate compiled'
+        + '  executables.'
+        + '  Train will compile and train if on CS-1,'
+        + '  and just train locally (CPU/GPU) if not on CS-1.'
+        + '  Eval will run eval locally for the last checkpoint.'
+        + '  Eval_all will run eval locally for all available checkpoints.'
+    ),
+)
+#parser.add_argument(
+#    '-p',
+#    '--params',
+#    default=DEFAULT_PARAMS_FILE,
+#    help='Path to .yaml file with model parameters',
+#)
+parser.add_argument(
+    '-o',
+    '--model_dir',
+    type=str,
+    help='Save compilation and non-simfab outputs',
+)
+#parser.add_argument(
+#    '--steps',
+#    type=int,
+#    help='Num of steps to run in total for mode=train or eval',
+#)
+#parser.add_argument(
+#    '--device',
+#    default=None,
+#    help='Force model to run on a specific device (e.g., --device /gpu:0)',
+#)
+
+args_global = parser.parse_args()
 
 NUM_PAR_SAMPLER = args_global.num_cpu_core
 SAMPLES_PER_PROC = -(-200 // NUM_PAR_SAMPLER) # round up division
