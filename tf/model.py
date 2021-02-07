@@ -1,7 +1,7 @@
 import tensorflow as tf
 from graphsaint.globals import *
-from graphsaint.tensorflow_version.inits import *
-import graphsaint.tensorflow_version.layers as layers
+from graphsaint.tf.inits import *
+import graphsaint.tf.layers as layers
 from graphsaint.utils import *
 import pdb
 
@@ -31,7 +31,7 @@ class GraphSAINT:
         self.jk = None if 'jk' not in arch_gcn else arch_gcn['jk']
         self.arch_gcn = arch_gcn
         self.adj_subgraph = placeholders['adj_subgraph']
-        # adj_subgraph_* are to store row-wise partitioned full graph adj tiles. 
+        # adj_subgraph_* are to store row-wise partitioned full graph adj tiles.
         self.adj_subgraph_0=placeholders['adj_subgraph_0']
         self.adj_subgraph_1=placeholders['adj_subgraph_1']
         self.adj_subgraph_2=placeholders['adj_subgraph_2']
@@ -41,9 +41,7 @@ class GraphSAINT:
         self.adj_subgraph_6=placeholders['adj_subgraph_6']
         self.adj_subgraph_7=placeholders['adj_subgraph_7']
         self.dim0_adj_sub = placeholders['dim0_adj_sub'] #adj_full_norm.shape[0]/8
-        
-        print("########## Model init graph: ",tf.compat.v1.get_default_graph())
-        
+
         self.features = tf.Variable(tf.constant(features, dtype=DTYPE), trainable=False)
         self.dualGPU=args_global.dualGPU
         _indices = np.column_stack(adj_full_norm.nonzero())
@@ -59,13 +57,16 @@ class GraphSAINT:
         self.set_dims(_dims)
         self.placeholders = placeholders
 
-        self.optimizer = tf.compat.v1.train.AdamOptimizer(learning_rate=self.lr)
+        self.optimizer = tf.compat.v1.train.AdamOptimizer(
+            learning_rate=self.lr
+        )
 
         self.loss = 0
         self.opt_op = None
+        self.train_op = None
         self.norm_loss = placeholders['norm_loss']
         self.is_train = placeholders['is_train']
-        
+
         self.build()
 
     def set_dims(self,dims):
@@ -81,7 +82,6 @@ class GraphSAINT:
             self.idx_conv = idx_conv
         else:
             self.idx_conv = list(np.where(np.array(self.order_layer)==1)[0])
-
 
     def build(self):
         """
@@ -111,9 +111,18 @@ class GraphSAINT:
             clipped_grads_and_vars = [(tf.clip_by_value(grad, -5.0, 5.0) if grad is not None else None, var)
                     for grad, var in grads_and_vars]
             self.grad, _ = clipped_grads_and_vars[0]
-            self.opt_op = self.optimizer.apply_gradients(clipped_grads_and_vars)
-        self.preds = self.predict()
+            self.opt_op = self.optimizer.apply_gradients(
+                clipped_grads_and_vars
+            )
+            global_step = tf.compat.v1.train.get_global_step()
+            print("global_step: " + str(global_step))
+            #if global_step:
+            update_global_step = tf.compat.v1.assign(
+                global_step, global_step + 1, name = 'update_global_step'
+            )
+            self.train_op = tf.group(self.opt_op, update_global_step)
 
+        self.preds = self.predict()
 
     def _loss(self):
         # these are all the trainable var
@@ -129,7 +138,7 @@ class GraphSAINT:
         # weighted loss due to bias in appearance of vertices
         self.loss_terms = f_loss(logits=self.node_preds, labels=self.placeholders['labels'])
         loss_terms_ndims = self.loss_terms.shape.ndims if self.loss_terms.shape is not None else None
-        
+
         # matmul fix #############################################################
         if args_global.loss_dim_expand:
             self.loss_terms = tf.reshape(self.loss_terms,(-1,1))
@@ -137,7 +146,7 @@ class GraphSAINT:
             if loss_terms_ndims == 1:
                 self.loss_terms = tf.reshape(self.loss_terms,(-1,1))
         ##########################################################################
-        
+
         self._weight_loss_batch = tf.nn.embedding_lookup(params=self.norm_loss, ids=self.node_subgraph)
         _loss_terms_weight = tf.linalg.matmul(tf.transpose(a=self.loss_terms),\
                     tf.reshape(self._weight_loss_batch,(-1,1)))
@@ -186,4 +195,3 @@ class GraphSAINT:
                     hidden = self.aggregators[layer]((hidden,adj,self.dims_feat[layer],_adj_partition_list,self.dim0_adj_sub))
                     ret_l.append(hidden)
         return ret_l
-

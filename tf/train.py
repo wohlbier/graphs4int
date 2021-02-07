@@ -1,7 +1,7 @@
 from graphsaint.globals import *
-from graphsaint.tensorflow_version.inits import *
-from graphsaint.tensorflow_version.model import GraphSAINT
-from graphsaint.tensorflow_version.minibatch import Minibatch
+from graphsaint.tf.inits import *
+from graphsaint.tf.model import GraphSAINT
+from graphsaint.tf.minibatch import Minibatch
 from graphsaint.utils import *
 from graphsaint.metric import *
 from tensorflow.python.client import timeline
@@ -37,7 +37,7 @@ def evaluate_full_batch(sess,model,minibatch_iter,many_runs_timeline,mode):
     """
     Full batch evaluation
     NOTE: HERE GCN RUNS THROUGH THE FULL GRAPH. HOWEVER, WE CALCULATE F1 SCORE
-        FOR VALIDATION / TEST NODES ONLY. 
+        FOR VALIDATION / TEST NODES ONLY.
     """
     options = tf.compat.v1.RunOptions(trace_level=tf.compat.v1.RunOptions.FULL_TRACE)
     run_metadata = tf.compat.v1.RunMetadata()
@@ -139,9 +139,9 @@ def train(train_phases,model,minibatch,\
     many_runs_timeline=[]       # only used when TF timeline is enabled
     for ip,phase in enumerate(train_phases):
         # We normally only have a single phase of training (see README for defn of 'phase').
-        # On the other hand, our implementation does support multi-phase training. 
+        # On the other hand, our implementation does support multi-phase training.
         # e.g., you can use smaller subgraphs during initial epochs and larger subgraphs
-        #       when closer to convergence. -- This might speed up convergence. 
+        #       when closer to convergence. -- This might speed up convergence.
         minibatch.set_sampler(phase)
         num_batches = minibatch.num_training_batches()
         printf('START PHASE {:4d}'.format(ip),style='underline')
@@ -176,7 +176,7 @@ def train(train_phases,model,minibatch,\
                     l_size_subg.append(minibatch.size_subgraph)
             time_train += time_train_ep
             time_prepare += time_prepare_ep
-            
+
             if (e+1)%EVAL_VAL_EVERY_EP == 0:
                 if args_global.cpu_eval:      # Full batch evaluation using CPU
                     # we have to start a new session so that CPU can perform full-batch eval.
@@ -244,4 +244,3 @@ def train_main(argv=None):
 
 if __name__ == '__main__':
     tf.compat.v1.app.run(main=train_main)
-

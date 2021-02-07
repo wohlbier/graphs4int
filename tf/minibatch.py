@@ -1,6 +1,6 @@
 from graphsaint.globals import *
 import math
-from graphsaint.tensorflow_version.inits import *
+from graphsaint.tf.inits import *
 from graphsaint.utils import *
 from graphsaint.graph_samplers import *
 from graphsaint.norm_aggr import *
@@ -65,7 +65,7 @@ class Minibatch:
         self.subgraphs_remaining_data = []
         self.subgraphs_remaining_nodes = []
         self.subgraphs_remaining_edge_index = []
-        
+
         self.norm_loss_train = np.zeros(self.adj_train.shape[0])
         # norm_loss_test is used in full batch evaluation (without sampling). so neighbor features are simply averaged.
         self.norm_loss_test = np.zeros(self.adj_full_norm.shape[0])
@@ -74,7 +74,7 @@ class Minibatch:
         self.norm_loss_test[self.node_val] = 1./_denom
         self.norm_loss_test[self.node_test] = 1./_denom
         self.norm_aggr_train = np.zeros(self.adj_train.size)
-       
+
         self.sample_coverage = train_params['sample_coverage']
         self.dropout = train_params['dropout']
         self.deg_train = np.array(self.adj_train.sum(1)).flatten()
@@ -115,7 +115,7 @@ class Minibatch:
         self.norm_aggr_train = np.zeros(self.adj_train.size).astype(np.float32)
 
         # For edge sampler, no need to estimate norm factors, we can calculate directly.
-        # However, for integrity of the framework, we decide to follow the same procedure for all samplers: 
+        # However, for integrity of the framework, we decide to follow the same procedure for all samplers:
         # 1. sample enough number of subgraphs
         # 2. estimate norm factor alpha and lambda
         tot_sampled_nodes = 0
@@ -179,7 +179,10 @@ class Minibatch:
             adj = sp.csr_matrix((self.subgraphs_remaining_data.pop(),self.subgraphs_remaining_indices.pop(),\
                         self.subgraphs_remaining_indptr.pop()),shape=(self.node_subgraph.size,self.node_subgraph.size))
             adj_edge_index=self.subgraphs_remaining_edge_index.pop()
-            #print("{} nodes, {} edges, {} degree".format(self.node_subgraph.size,adj.size,adj.size/self.node_subgraph.size))
+            print("{} nodes, {} edges, {} degree".format(
+                self.node_subgraph.size,
+                adj.size,adj.size/self.node_subgraph.size)
+            )
             tt1 = time.time()
             assert len(self.node_subgraph) == adj.shape[0]
             norm_aggr(adj.data,adj_edge_index,self.norm_aggr_train,num_proc=args_global.num_cpu_core)
@@ -207,7 +210,7 @@ class Minibatch:
             feed_dict.update({self.placeholders['norm_loss']: self.norm_loss_test})
         else:
             feed_dict.update({self.placeholders['norm_loss']: self.norm_loss_train})
-        
+
         _num_edges = len(adj.nonzero()[1])
         _num_vertices = len(self.node_subgraph)
         _indices_ph = np.column_stack(adj.nonzero())
@@ -235,12 +238,12 @@ class Minibatch:
         tt3=time.time()
         # if mode in ['train']:
         #     print("t1:{:.3f} t2:{:.3f} t3:{:.3f}".format(tt0-tt1,tt2-tt1,tt3-tt2))
-        
+
 #         if mode in ['val','test']:
 #             feed_dict[self.placeholders['is_train']]=False
 #         else:
 #             feed_dict[self.placeholders['is_train']]=True
-            
+
         if mode in ['val','test']:
             feed_dict[self.placeholders['is_train']]=False
         else:
