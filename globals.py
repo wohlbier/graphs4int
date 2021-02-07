@@ -3,7 +3,6 @@ import os,sys,time,datetime
 from os.path import expanduser
 import argparse
 
-
 import subprocess
 git_rev = subprocess.Popen(
     "git rev-parse --short HEAD",

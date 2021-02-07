@@ -30,6 +30,8 @@ import os
 import sys
 import tensorflow as tf
 
+sys.path.append(os.path.join(os.path.dirname(__file__), '../..'))
+
 from graphsaint.globals import *
 from graphsaint.tf.inits import *
 from graphsaint.tf.model import GraphSAINT
@@ -38,21 +40,16 @@ from graphsaint.utils import *
 from graphsaint.metric import *
 from tensorflow.python.client import timeline
 
-## Relative path imports
-#sys.path.append(os.path.join(os.path.dirname(__file__), '../..'))
 #from common_zoo.estimator.tf.cs_estimator import CerebrasEstimator
 #from common_zoo.estimator.tf.run_config import CSRunConfig
 #from common_zoo.run_utils.utils import (
 #    save_dict,
 #    prep_env,
 #)
-#
-#from graphs.tf.model import model_fn
-#from graphs.tf.data import input_fn
-#from graphs.tf.utils import DEFAULT_PARAMS_FILE, get_params
 
-# really major todo around val/test evaluation - less efficient than reference right now
-def evaluate_full_batch(sess,model,minibatch_iter,many_runs_timeline,mode):
+# really major todo around val/test evaluation - less efficient than reference
+# right now
+def evaluate_full_batch(sess, model, minibatch_iter, many_runs_timeline, mode):
     """
     Full batch evaluation
     NOTE: HERE GCN RUNS THROUGH THE FULL GRAPH. HOWEVER, WE CALCULATE F1 SCORE
@@ -159,9 +156,9 @@ epoch = -1
 
 # this class name is clearly from reference code but unrelated to
 # functionality now
-class IteratorInitializerHook(tf.estimator.SessionRunHook):
+class FeederHook(tf.estimator.SessionRunHook):
     def __init__(self):
-        super(IteratorInitializerHook, self).__init__()
+        super(FeederHook, self).__init__()
         self.iterator_initiliser_func = None
         self.feed_update_func = None
 
@@ -172,7 +169,7 @@ def train_input_fn(*args, **kwargs):
 
     phase=kwargs["phase"]
 
-    iterator_initiliser_hook = IteratorInitializerHook()
+    feeder_hook = FeederHook()
 
     def epoch_generator(minibatch):
         for e in range(int(phase['end'])):
@@ -180,18 +177,9 @@ def train_input_fn(*args, **kwargs):
             epoch = e
             printf('Epoch {:4d}'.format(e),style='bold')
             minibatch.shuffle()
-            #feed_dict_list, labels_list = [],[] # have to be variable len
             while not minibatch.end():
                 feed_dict, labels = minibatch.feed_dict(mode='train')
-                #feed_dict_list.append(feed_dict)
-                #labels_list.append(labels)
                 yield feed_dict, labels
-
-            #num_train_steps_this_epoch = len(feed_dict_list)
-            #print("num_train_steps_this_epoch:", num_train_steps_this_epoch)
-
-            #for f_d, l in zip(feed_dict_list, labels_list):
-            #    yield f_d, l
 
     def input_fn():
 
@@ -218,7 +206,7 @@ def train_input_fn(*args, **kwargs):
 
         gen = epoch_generator(minibatch)
 
-        iterator_initiliser_hook.feed_update_func = \
+        feeder_hook.feed_update_func = \
             lambda original_args: tf.estimator.SessionRunArgs(
                 original_args.fetches, feed_dict= next(gen)[0],
                 options=original_args.options
@@ -226,15 +214,15 @@ def train_input_fn(*args, **kwargs):
 
         features, labels = None, None
 
-        return features, labels #dataset
+        return features, labels
 
-    return input_fn, placeholders, iterator_initiliser_hook
+    return input_fn, placeholders, feeder_hook
 
 def custom_model_fn(*model_args, **kwargs):
 
-    train_data,train_params,arch_gcn = \
+    train_data, train_params, arch_gcn = \
         model_args[0], model_args[1], model_args[2]
-    adj_full,adj_train,feats,class_arr,role = train_data
+    adj_full, adj_train, feats, class_arr, role = train_data
     adj_full = adj_full.astype(np.int32)
     adj_train = adj_train.astype(np.int32)
     adj_full_norm = adj_norm(adj_full)
@@ -252,15 +240,15 @@ def custom_model_fn(*model_args, **kwargs):
 
         loss = model.loss
 
-        train_op = model.train_op # versus model.opt_op, includes global step update
+        train_op = model.train_op #includes model.opt_op and global step update
 
         return tf.estimator.EstimatorSpec(
             mode=mode, loss=loss, train_op=train_op
         )
     return model_fn
 
-
-# this is a first attempt at a callback to do validation, but this feels like a big bottleneck as it stands
+# this is a first attempt at a callback to do validation, but this feels like
+# a big bottleneck as it stands
 class SessionSaverHook(tf.estimator.SessionRunHook):
     def __init__(self):
         super(SessionSaverHook, self).__init__()
@@ -284,70 +272,27 @@ class SessionSaverHook(tf.estimator.SessionRunHook):
         global epoch
         if (epoch+1)%EVAL_VAL_EVERY_EP == 0 and self.last_eval < epoch:
             self.last_eval = epoch
-#             global_step = tf.train.get_global_step()
+            #global_step = tf.train.get_global_step()
             self.session = sess_run_context.session
-#             self.saver.save(self.session, 'test-saving', global_step=global_step)
+            #self.saver.save(
+            #    self.session, 'test-saving', global_step=global_step
+            #)
 
             self.saver.save(self.session,'./tmp.chkpt')
-
             self.eval_saver.restore(self.sess_cpu, './tmp.chkpt')
 
             global minibatch
             global model
             many_runs_timeline = None
 
-            loss_val,f1mic_val,f1mac_val,time_eval = \
+            loss_val, f1mic_val, f1mac_val, time_eval = \
                 evaluate_full_batch(
                     self.sess_cpu, model, minibatch, many_runs_timeline,
                     mode='val'
                 )
             printf(
-                ' VALIDATION:     loss = {:.4f}\tmic = {:.4f}\tmac = {:.4f}'.format(loss_val,f1mic_val,f1mac_val),style='yellow'
+                ' VALIDATION:     loss = {:.4f}\tmic = {:.4f}\tmac = {:.4f}'.format(loss_val,f1mic_val,f1mac_val),style='blue'
             )
-
-
-#########
-# TRAIN #
-#########
-# this is quite readble... but missing most of the metric/monitoring block from the reference
-
-def train(train_phases,model_args):
-
-    import time
-
-    for ip,phase in enumerate(train_phases):
-
-        tr_input_fn, placeholders, iterator_hook = train_input_fn(
-            *model_args, phase=phase
-        )
-
-        tr_model_fn = custom_model_fn(*model_args, placeholders=placeholders)
-
-        log_steps = TRAIN_LOG_FREQ
-        run_config = tf.estimator.RunConfig(
-            model_dir=args_global.dir_log+'/models',
-            save_summary_steps=log_steps,
-            save_checkpoints_steps=log_steps,
-            log_step_count_steps=log_steps
-        ) # minimal
-
-        estimator = tf.compat.v1.estimator.Estimator(
-            model_fn=tr_model_fn, config=run_config
-        ) # other key arg would be "params"
-
-        session_saver_hook = SessionSaverHook()
-
-        train_steps =  NUM_GLOBAL_TRAIN_STEPS
-        estimator.train(
-            input_fn=tr_input_fn, steps=train_steps,
-            hooks=[iterator_hook, session_saver_hook]
-        )
-        #############################################
-        # remainder of original loop and metric features removed
-
-########
-# MAIN #
-########
 
 def main(argv=None):
     #args = parse_args()
@@ -403,13 +348,8 @@ def main(argv=None):
     #    use_cs=use_cs,
     #    config=config,
     #)
-    p = None
-    for ip, phase in enumerate(train_phases):
-        p = phase
-        print("ip: " + str(ip) + " p: " + str(p))
-
     input_fn, placeholders, iterator_hook = train_input_fn(
-        *model_args, phase=p
+        *model_args, phase=train_phases[0]
     )
     model_fn = custom_model_fn(
         *model_args, placeholders=placeholders
