@@ -5,14 +5,23 @@ import argparse
 
 
 import subprocess
-git_rev = subprocess.Popen("git rev-parse --short HEAD", shell=True, stdout=subprocess.PIPE, universal_newlines=True).communicate()[0]
-git_branch = subprocess.Popen("git symbolic-ref --short -q HEAD", shell=True, stdout=subprocess.PIPE, universal_newlines=True).communicate()[0]
+git_rev = subprocess.Popen(
+    "git rev-parse --short HEAD",
+    shell=True,
+    stdout=subprocess.PIPE,
+    universal_newlines=True
+).communicate()[0]
+git_branch = subprocess.Popen(
+    "git symbolic-ref --short -q HEAD",
+    shell=True,
+    stdout=subprocess.PIPE,
+    universal_newlines=True
+).communicate()[0]
 
 timestamp = time.time()
-timestamp = datetime.datetime.fromtimestamp(int(timestamp)).strftime('%Y-%m-%d %H-%M-%S')
-
-
-
+timestamp = datetime.datetime.fromtimestamp(
+    int(timestamp)).strftime('%Y-%m-%d %H-%M-%S'
+    )
 
 # Set random seed
 #seed = 123
@@ -20,25 +29,112 @@ timestamp = datetime.datetime.fromtimestamp(int(timestamp)).strftime('%Y-%m-%d %
 #tf.set_random_seed(seed)
 
 
-parser = argparse.ArgumentParser(description="argument for GraphSAINT training")
-parser.add_argument("--num_cpu_core",default=20,type=int,help="Number of CPU cores for parallel sampling")
-parser.add_argument("--log_device_placement",default=False,action="store_true",help="Whether to log device placement")
-parser.add_argument("--data_prefix",required=True,type=str,help="prefix identifying training data")
-parser.add_argument("--dir_log",default=".",type=str,help="base directory for logging and saving embeddings")
-parser.add_argument("--gpu",default="-1234",type=str,help="which GPU to use")
-parser.add_argument("--eval_train_every",default=15,type=int,help="How often to evaluate training subgraph accuracy")
-parser.add_argument("--eval_val_every",default=1,type=int,help="How often to evaluate training subgraph accuracy on val data")
-parser.add_argument("--train_config",required=True,type=str,help="path to the configuration of training (*.yml)")
-parser.add_argument("--dtype",default="s",type=str,help="d for double, s for single precision floating point")
-parser.add_argument("--timeline",default=False,action="store_true",help="to save timeline.json or not")
-parser.add_argument("--tensorboard",default=False,action="store_true",help="to save data to tensorboard or not")
-parser.add_argument("--dualGPU",default=False,action="store_true",help="whether to distribute the model to two GPUs")
-parser.add_argument("--cpu_eval",default=False,action="store_true",help="whether to use CPU to do evaluation")
-parser.add_argument("--saved_model_path",default="",type=str,help="path to pretrained model file")
+parser = argparse.ArgumentParser(
+    description="argument for GraphSAINT training"
+)
+parser.add_argument(
+    "--num_cpu_core",
+    default=20,
+    type=int,
+    help="Number of CPU cores for parallel sampling"
+)
+parser.add_argument(
+    "--log_device_placement",
+    default=False,
+    action="store_true",
+    help="Whether to log device placement"
+)
+parser.add_argument(
+    "--data_prefix",
+    required=True,
+    type=str,
+    help="prefix identifying training data"
+)
+parser.add_argument(
+    "--dir_log",
+    default=".",
+    type=str,
+    help="base directory for logging and saving embeddings"
+)
+parser.add_argument(
+    "--gpu",
+    default="-1234",
+    type=str,
+    help="which GPU to use"
+)
+parser.add_argument(
+    "--eval_train_every",
+    default=15,
+    type=int,
+    help="How often to evaluate training subgraph accuracy"
+)
+parser.add_argument(
+    "--eval_val_every",
+    default=1,
+    type=int,
+    help="How often to evaluate training subgraph accuracy on val data"
+)
+parser.add_argument(
+    "--train_config",
+    required=True,
+    type=str,
+    help="path to the configuration of training (*.yml)"
+)
+parser.add_argument(
+    "--dtype",
+    default="s",
+    type=str,
+    help="d for double, s for single precision floating point"
+)
+parser.add_argument(
+    "--timeline",
+    default=False,
+    action="store_true",
+    help="to save timeline.json or not"
+)
+parser.add_argument(
+    "--tensorboard",
+    default=False,
+    action="store_true",
+    help="to save data to tensorboard or not"
+)
+parser.add_argument(
+    "--dualGPU",
+    default=False,
+    action="store_true",
+    help="whether to distribute the model to two GPUs"
+)
+parser.add_argument(
+    "--cpu_eval",
+    default=False,
+    action="store_true",
+    help="whether to use CPU to do evaluation"
+)
+parser.add_argument(
+    "--saved_model_path",
+    default="",
+    type=str,
+    help="path to pretrained model file"
+)
 
-parser.add_argument("--loss_dim_expand",default=False,action="store_true",help="whether to expand loss dim to accomodate ogbn data")
-parser.add_argument("--num_global_train_steps",default=1,type=int,help="How many times to perform the training operation i.e. num calls to sess.run()")
-parser.add_argument("--train_log_freq",default=20,type=int,help="How often perform the log ops spec'd in the estimator RunConfig, like train loss")
+parser.add_argument(
+    "--loss_dim_expand",
+    default=False,
+    action="store_true",
+    help="whether to expand loss dim to accomodate ogbn data"
+)
+parser.add_argument(
+    "--num_global_train_steps",
+    default=1,
+    type=int,
+    help="How many times to perform the training operation i.e. num calls to sess.run()"
+)
+parser.add_argument(
+    "--train_log_freq",
+    default=20,
+    type=int,
+    help="How often perform the log ops spec'd in the estimator RunConfig, like train loss"
+)
 args_global = parser.parse_args()
 
 
