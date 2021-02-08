@@ -181,7 +181,7 @@ def train_input_fn(*args, **kwargs):
                 feed_dict, labels = minibatch.feed_dict(mode='train')
                 yield feed_dict, labels
 
-    def input_fn():
+    def input_fn(params):
 
         train_data,train_params,arch_gcn = args[0], args[1], args[2]
         adj_full,adj_train,feats,class_arr,role = train_data
@@ -228,7 +228,7 @@ def custom_model_fn(*model_args, **kwargs):
     adj_full_norm = adj_norm(adj_full)
     num_classes = class_arr.shape[1]
 
-    def model_fn(features,labels, mode):
+    def model_fn(features,labels, mode, params):
 
         global placeholders
         global model
@@ -307,6 +307,9 @@ def main(argv=None):
     model_args = [train_data,train_params,arch_gcn]
 
     params = vars(args_global)
+    # add some keys to params
+    params['optimizer'] = { 'grad_accum_steps': 2 }
+    params['runconfig'] = { 'save_summary_steps': TRAIN_LOG_FREQ }
     print("params: " + str(params))
     save_dict(params, model_dir=params['model_dir'])
 
@@ -331,32 +334,32 @@ def main(argv=None):
     if not (use_cs or params['optimizer']['grad_accum_steps'] < 2):
         params['runconfig']['save_summary_steps'] = 1
 
-    #config = CSRunConfig(
-    #    cs_ip=cs_ip, stack_params=stack_params, **params['runconfig'],
-    #)
-    config = tf.estimator.RunConfig(
-        model_dir=params["model_dir"],
-        save_summary_steps=TRAIN_LOG_FREQ,
-        save_checkpoints_steps=TRAIN_LOG_FREQ,
-        log_step_count_steps=TRAIN_LOG_FREQ
+    config = CSRunConfig(
+        cs_ip=cs_ip, stack_params=stack_params, **params['runconfig'],
     )
-
-    #est = CerebrasEstimator(
-    #    model_fn,
-    #    model_dir=params['model_dir'],
-    #    params=params,
-    #    use_cs=use_cs,
-    #    config=config,
+    #config = tf.estimator.RunConfig(
+    #    model_dir=params["model_dir"],
+    #    save_summary_steps=TRAIN_LOG_FREQ,
+    #    save_checkpoints_steps=TRAIN_LOG_FREQ,
+    #    log_step_count_steps=TRAIN_LOG_FREQ
     #)
+
     input_fn, placeholders, iterator_hook = train_input_fn(
         *model_args, phase=train_phases[0]
     )
     model_fn = custom_model_fn(
         *model_args, placeholders=placeholders
     )
-    est = tf.compat.v1.estimator.Estimator(
-        model_fn=model_fn, config=config
+    est = CerebrasEstimator(
+        model_fn=model_fn,
+        model_dir=params['model_dir'],
+        params=params,
+        use_cs=use_cs,
+        config=config,
     )
+    #est = tf.compat.v1.estimator.Estimator(
+    #    model_fn=model_fn, config=config
+    #)
     session_saver_hook = SessionSaverHook()
 
     if params['mode'] == 'train':
@@ -378,11 +381,11 @@ def main(argv=None):
     #            input_fn=lambda: input_fn(params, tf.estimator.ModeKeys.EVAL),
     #            checkpoint_path=ckpt
     #        )
-    #else:
-    #    est.compile(
-    #        input_fn,
-    #        validate_only=(params['mode'] == 'validate_only'),
-    #    )
+    else:
+        est.compile(
+            input_fn=input_fn,
+            validate_only=(params['mode'] == 'validate_only'),
+        )
 
 if __name__ == '__main__':
     tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.INFO)

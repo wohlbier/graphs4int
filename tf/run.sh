@@ -35,4 +35,8 @@ python \
     --loss_dim_expand \
     --train_log_freq 100 \
     --num_global_train_steps 60 \
-    --model_dir ./model_dir
+    --model_dir ./model_dir #\
+#    --mode compile_only
+
+
+#--cs_ip 1.1.1.1
