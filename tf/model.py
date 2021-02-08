@@ -115,7 +115,7 @@ class GraphSAINT:
                 clipped_grads_and_vars
             )
             global_step = tf.compat.v1.train.get_global_step()
-            print("global_step: " + str(global_step))
+
             #if global_step:
             update_global_step = tf.compat.v1.assign(
                 global_step, global_step + 1, name = 'update_global_step'

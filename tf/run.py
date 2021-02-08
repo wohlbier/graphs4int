@@ -213,8 +213,8 @@ def train_input_fn(*args, **kwargs):
             )
 
         features, labels = None, None
-
-        return features, labels
+        ds = tf.data.Dataset.from_tensor_slices([[1,1],[2,2]])
+        return ds #features, labels
 
     return input_fn, placeholders, feeder_hook
 
@@ -228,7 +228,7 @@ def custom_model_fn(*model_args, **kwargs):
     adj_full_norm = adj_norm(adj_full)
     num_classes = class_arr.shape[1]
 
-    def model_fn(features,labels, mode, params):
+    def model_fn(features, labels, mode, params):
 
         global placeholders
         global model
