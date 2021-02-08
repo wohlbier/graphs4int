@@ -5,10 +5,13 @@
 # cd /path/to/modelzoo
 # module load singularity-3.7.0-gcc-10.2.0-7qnn4oi
 # singularity shell --bind $CEREBRAS_DATA_DIR:/data,`pwd`:/work $CEREBRAS_SIF_DIR/cbcore-latest.sif
+# cd /work/graphsaint
+# chmod 777 *.so
 
-DATA=./data/ogbn_arxiv
-#DATA=/data/ogbn_products
-#DATA=/data/ogbn_arxiv
+
+#DATA=./data/ogbn_arxiv
+#DATA=./data/ogbn_products
+DATA=/data/ogbn_arxiv/GraphSAINT
 #DATA=/data/ogbn_products
 
 rm -f ./checkpoint

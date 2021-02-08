@@ -4,18 +4,25 @@ from os.path import expanduser
 import argparse
 
 import subprocess
-git_rev = subprocess.Popen(
-    "git rev-parse --short HEAD",
-    shell=True,
-    stdout=subprocess.PIPE,
-    universal_newlines=True
-).communicate()[0]
-git_branch = subprocess.Popen(
-    "git symbolic-ref --short -q HEAD",
-    shell=True,
-    stdout=subprocess.PIPE,
-    universal_newlines=True
-).communicate()[0]
+try:
+    git_rev = subprocess.Popen(
+        "git rev-parse --short HEAD",
+        shell=True,
+        stdout=subprocess.PIPE,
+        universal_newlines=True
+    ).communicate()[0]
+except:
+    git_rev='git_rev'
+
+try:
+    git_branch = subprocess.Popen(
+        "git symbolic-ref --short -q HEAD",
+        shell=True,
+        stdout=subprocess.PIPE,
+        universal_newlines=True
+    ).communicate()[0]
+except:
+    git_branch='git_branch'
 
 timestamp = time.time()
 timestamp = datetime.datetime.fromtimestamp(
