@@ -40,12 +40,12 @@ from graphsaint.utils import *
 from graphsaint.metric import *
 from tensorflow.python.client import timeline
 
-#from common_zoo.estimator.tf.cs_estimator import CerebrasEstimator
-#from common_zoo.estimator.tf.run_config import CSRunConfig
-#from common_zoo.run_utils.utils import (
-#    save_dict,
-#    prep_env,
-#)
+from common_zoo.estimator.tf.cs_estimator import CerebrasEstimator
+from common_zoo.estimator.tf.run_config import CSRunConfig
+from common_zoo.run_utils.utils import (
+    save_dict,
+    prep_env,
+)
 
 # really major todo around val/test evaluation - less efficient than reference
 # right now
@@ -308,28 +308,28 @@ def main(argv=None):
 
     params = vars(args_global)
     print("params: " + str(params))
-    #cb#save_dict(params, model_dir=params['model_dir'])
+    save_dict(params, model_dir=params['model_dir'])
 
     use_cs = (
         params['mode'] in ('train', 'compile_only')
         and params['cs_ip'] is not None
     )
     cs_ip = params['cs_ip'] + ':9000' if use_cs else None
-    #cb#prep_env(params)
+    prep_env(params)
 
     # Cerebras stack params
     stack_params = dict()
-    #if use_cs:
-    #    from cerebras.pb.stack.full_pb2 import FullConfig
-    #    from cerebras.pb.common.tri_state_pb2 import TS_DISABLED
-    #
-    #    # Custom Cerebras config for improved performance
-    #    config = FullConfig()
-    #    config.placement.match_port_format.prefer_dense_packets = TS_DISABLED
-    #    stack_params['config'] = config
+    if use_cs:
+        from cerebras.pb.stack.full_pb2 import FullConfig
+        from cerebras.pb.common.tri_state_pb2 import TS_DISABLED
 
-    #if not (use_cs or params['optimizer']['grad_accum_steps'] < 2):
-    #    params['runconfig']['save_summary_steps'] = 1
+        # Custom Cerebras config for improved performance
+        config = FullConfig()
+        config.placement.match_port_format.prefer_dense_packets = TS_DISABLED
+        stack_params['config'] = config
+
+    if not (use_cs or params['optimizer']['grad_accum_steps'] < 2):
+        params['runconfig']['save_summary_steps'] = 1
 
     #config = CSRunConfig(
     #    cs_ip=cs_ip, stack_params=stack_params, **params['runconfig'],
